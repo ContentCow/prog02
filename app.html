@@ -1,27 +1,119 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Represent! Voter guide</title>
-  <link rel="stylesheet" href="css/examples.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Represent! Voter guide</title>
+<link rel="stylesheet" href="css/examples.css">
+<style>
+  .ai { border:2px dashed #7a5bb5; background:#f6f1fb; padding:10px; margin:10px 0; border-radius:6px; }
+  .official { border:2px solid #222; background:#f4f4ee; padding:10px; margin:10px 0; border-radius:6px; }
+  .opinion { border:2px dashed #b8860b; background:#fff8e1; padding:10px; margin:10px 0; border-radius:6px; }
+  .tag { display:inline-block; font-size:11px; font-weight:bold; padding:2px 8px; border-radius:10px; background:#7a5bb5; color:#fff; margin-right:6px; }
+  .tag.off { background:#222; }
+  .tag.op { background:#b8860b; }
+  .warn { background:#fff3cd; padding:6px 10px; border-radius:4px; }
+  .bad { color:#a00; }
+  .ok { color:#070; }
+  .body { white-space:pre-wrap; }
+  .barbox { background:#e5e5e5; border-radius:5px; margin:4px 0; }
+  .bar { height:10px; background:#7a5bb5; border-radius:5px; }
+  .topic { border:1px solid #ccc; padding:8px; margin:6px 0; border-radius:6px; }
+  table.cmp { border-collapse:collapse; width:100%; }
+  table.cmp td, table.cmp th { border:1px solid #ccc; padding:8px; vertical-align:top; }
+  td.empty { border:1px dashed #999; color:#666; background:#fafafa; }
+  nav button { margin-right:6px; }
+  nav button.on { font-weight:bold; text-decoration:underline; }
+  img.ill { max-width:100%; border-radius:6px; }
+  .gallery img { width:110px; margin:3px; border-radius:4px; cursor:pointer; }
+  blockquote { margin:6px 0; padding-left:10px; border-left:3px solid #bbb; font-size:14px; }
+  .side { flex:1; min-width:240px; border:1px solid #ccc; padding:8px; border-radius:6px; }
+</style>
 </head>
 <body>
 <main>
   <h1>Represent!</h1>
   <p><small>Class assignment, not official voter information. Nov 3, 2026 ballot.</small></p>
-  <p><b>Session cost: $<span id="sessionCost">0.0000</span></b>
-     (<span id="sessionCalls">0</span> calls)</p>
+  <p><b>Session cost: $<span id="sessionCost">0.0000</span></b> (<span id="sessionCalls">0</span> calls)
+    &nbsp; Model:
+    <select id="model">
+      <option value="google/gemini-2.5-flash-lite">Gemini 2.5 Flash Lite</option>
+      <option value="google/gemini-2.5-flash">Gemini 2.5 Flash</option>
+      <option value="openai/gpt-4.1-nano">GPT-4.1 Nano</option>
+      <option value="openai/gpt-4.1-mini">GPT-4.1 Mini</option>
+    </select>
+  </p>
 
   <nav>
-    <button type="button" data-tab="measures">Understand a measure</button>
+    <button type="button" data-tab="measures" class="on">Understand a measure</button>
     <button type="button" data-tab="compare">Compare the two sides</button>
     <button type="button" data-tab="offices">Explain an office</button>
   </nav>
 
-  <section id="tab-measures"><h2>Understand a measure</h2><p>Coming next.</p></section>
-  <section id="tab-compare" hidden><h2>Compare the two sides</h2><p>Coming later.</p></section>
-  <section id="tab-offices" hidden><h2>Explain an office</h2><p>Coming later.</p></section>
+  <!-- TAB 1 -->
+  <section id="tab-measures">
+    <h2>Understand a measure</h2>
+    <p>Measure: <select id="measure"></select>
+      Reading level:
+      <select id="level">
+        <option value="asis">As written (no AI)</option>
+        <option value="plain">Plain English (grade 11-13)</option>
+        <option value="everyday" selected>Everyday (grade 7-9)</option>
+        <option value="simplest">Simplest (grade 3-4)</option>
+      </select>
+      Length:
+      <select id="length">
+        <option value="headline">Headline (25 words or fewer)</option>
+        <option value="short" selected>Short (75-100 words)</option>
+        <option value="standard">Standard (250-300 words)</option>
+        <option value="complete">Complete (every provision)</option>
+      </select>
+    </p>
+    <p><label><input type="checkbox" id="marked"> Send the text with [NEW] / [DELETED] markers (helps with repeals)</label></p>
+    <p id="warning" class="warn" hidden></p>
+    <p><button id="go" type="button">Show</button></p>
+    <p id="officialTitle"></p>
+    <p>
+      <a id="officialPage" target="_blank">Official voter guide page</a> ·
+      <a id="legalText" target="_blank">Full legal text (PDF)</a> ·
+      <a href="#" id="toggleFull">Show / hide full legal text here</a>
+    </p>
+    <p><small id="measureInfo"></small></p>
+    <div id="result"></div>
+    <details>
+      <summary>The state's official summary (never sent to the model)</summary>
+      <p id="officialSummary"></p>
+      <small id="officialFk"></small>
+    </details>
+    <pre id="fullText" hidden class="body" style="max-height:400px;overflow:auto"></pre>
+
+    <h3>Topics of concern</h3>
+    <div id="topics"></div>
+    <div id="topicResult"></div>
+  </section>
+
+  <!-- TAB 2 -->
+  <section id="tab-compare" hidden>
+    <h2>Compare the two sides</h2>
+    <p>Measure: <select id="cmpMeasure"></select> <button id="cmpGo" type="button">Extract claims (one AI call)</button></p>
+    <p class="warn" id="disclaimer"></p>
+    <div id="cmpWho"></div>
+    <div id="cmpResult"></div>
+  </section>
+
+  <!-- TAB 3 -->
+  <section id="tab-offices" hidden>
+    <h2>Explain a down-ballot office</h2>
+    <p>Office: <select id="office"></select></p>
+    <div id="officeFacts"></div>
+    <p>
+      <button id="offExplain" type="button">Explain this office</button>
+      <button id="offImage" type="button">Generate illustration (about $0.04)</button>
+    </p>
+    <div id="offText"></div>
+    <div id="offImg"></div>
+    <div id="gallery" class="gallery"></div>
+  </section>
 </main>
 
 <script src="js/config.local.js"></script>
